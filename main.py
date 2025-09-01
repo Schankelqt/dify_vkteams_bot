@@ -139,13 +139,22 @@ async def on_message(event: Event, bot: Bot):
         if conv_id:
             conversation_ids[user_key] = conv_id
 
+    # Первый вызов — с conv_id
     resp = dify_send_message(user_key, user_text, conv_id)
-    if resp is not None and resp.status_code == 404:
+
+    # Если ошибка 400 → fallback без conv_id
+    if resp is not None and resp.status_code == 400:
+        logger.warning(f"[Dify] 400 error — retrying without conversation_id for {user_key}")
         resp = dify_send_message(user_key, user_text, None)
 
+    # Обработка ответа
     if resp is not None and resp.ok:
         body = resp.json()
         answer_text = body.get("answer", "") or ""
+        new_conv_id = body.get("conversation_id")
+
+        if new_conv_id:
+            conversation_ids[user_key] = new_conv_id  # обновляем
 
         if is_confirmation(user_text) and ("sum" in answer_text.lower()):
             summary = clean_summary(answer_text)
