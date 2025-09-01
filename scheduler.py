@@ -143,7 +143,7 @@ def job_send_report(team_id: int):
     asyncio.run(send_report(team_id, today))
 
 # Расписание для всех команд (время — MSK)
-schedule.every().monday.at("11:36").do(job_send_questions, team_id=1, key="daily_start")
+schedule.every().monday.at("11:38").do(job_send_questions, team_id=1, key="daily_start")
 schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().thursday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
