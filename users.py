@@ -12,7 +12,7 @@ TEAMS = {
         "team_name": "Отдел бизнес-анализа операций на финансовых рынках",
         "tag": "Daily",
         "members": {
-            "karimovam1@sovcombank.ru": "Айрат Каримов",
+           # пока пусто; добавим позже
         },
         "managers": ["vostrikovkk@sovcombank.ru"],
     },
