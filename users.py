@@ -19,7 +19,7 @@ TEAMS = {
         "team_name": "Отдел бизнес-анализа операций на финансовых рынках",
         "tag": "Daily",
         "members": {
-           "bazarkinkv@sovcombank.ru": "Константин Базаркин",
+        "bazarkinkv@sovcombank.ru": "Константин Базаркин",
             "malyutinda@sovcombank.ru": "Дмитрий Малютин",
             "baroninap@sovcombank.ru": "Антон Баронин",
             "chasovaa@sovcombank.ru": "Андрей Часов",
@@ -31,9 +31,16 @@ TEAMS = {
         "team_name": "Отдел бизнес-анализа брокерских операций",
         "tag": "Weekly",
         "members": {
-            # пока пусто; добавим позже
+            "vasilevaea10@sovcombank.ru": "Екатерина Васильева",
+            "eremindv@sovcombank.ru": "Денис Еремин",
+            "provotorovaig@sovcombank.ru": "Ирина Провоторова",
+            "plotnikovaes@sovcombank.ru": "Екатерина Плотникова",
+            "voschenkovis@sovcombank.ru": "Илья Вощенков",
+            "akinshinany@sovcombank.ru": "Наталья Акиньшина",
+            "yurkovkv@sovcombank.ru": "Константин Юрков",
+            "korepanovaev@sovcombank.ru": "Екатерина Бахур",
         },
-        "managers": ["vostrikovkk@sovcombank.ru"],
+        "managers": ["vostrikovkk@sovcombank.ru","ochkinav@sovcombank.ru"],
     },
 }
 
@@ -41,3 +48,4 @@ TEAMS = {
 USERS = {}
 for t in TEAMS.values():
     USERS.update(t["members"])
+

@@ -1,18 +1,22 @@
-# main.py
 import asyncio
 import logging
 import os
 import re
 import json
 import hashlib
+from datetime import date
 from urllib.parse import urlsplit
 from dotenv import load_dotenv
 import requests
+from transliterate import translit
+
 from vk_teams_async_bot.bot import Bot
 from vk_teams_async_bot.events import Event
 from vk_teams_async_bot.handler import CommandHandler, MessageHandler
 from vk_teams_async_bot.filter import Filter
+
 from users import TEAMS, USERS
+from pyrus_client import upload_json_to_task
 
 # ---------- Логирование ----------
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -43,8 +47,8 @@ DIFY_HEADERS = {
     "Content-Type": "application/json",
 }
 
-# ---------- Поддержка ключей и формата ----------
 conversation_ids: dict[str, str] = {}
+last_date: dict[str, str] = {}
 
 CONFIRMATION_PHRASES = {
     "да", "да все верно", "да, все верно", "все верно", "всё верно",
@@ -73,14 +77,23 @@ def to_numeric_id(user_key: str) -> int:
     return int.from_bytes(h[:8], "big", signed=False)
 
 def find_team_id_vk(user_key: str) -> int | None:
-    try:
-        for team_id, team_data in TEAMS.items():
-            members = team_data.get("members", {})
-            if user_key in members or to_numeric_id(user_key) in members:
-                return team_id
-    except Exception:
-        pass
+    for team_id, team_data in TEAMS.items():
+        if user_key in team_data.get("members", {}):
+            return team_id
     return None
+
+def determine_tag(user_key: str) -> str:
+    team_id = find_team_id_vk(user_key)
+    if team_id is None:
+        return "daily"
+    team = TEAMS.get(team_id, {})
+    tag = team.get("tag", "daily").lower()
+    weekday = date.today().weekday()
+    if tag == "weekly":
+        return "weekly"
+    elif tag == "daily":
+        return "friday" if weekday == 0 else "daily"
+    return "daily"
 
 def clean_summary(answer_text: str) -> str:
     lines = (answer_text or "").splitlines()
@@ -89,7 +102,6 @@ def clean_summary(answer_text: str) -> str:
             return "\n".join(lines[i+1:]).strip()
     return (answer_text or "").strip()
 
-# ---------- Dify API ----------
 def dify_get_conversation_id(user_key: str) -> str | None:
     url = f"{DIFY_API_URL}/conversations"
     try:
@@ -104,9 +116,9 @@ def dify_get_conversation_id(user_key: str) -> str | None:
         logger.error(f"[Dify] get_conversation_id error for {user_key}: {e}")
     return None
 
-def dify_send_message(user_key: str, text: str, conversation_id: str | None = None):
+def dify_send_message(user_key: str, text: str, conversation_id: str | None = None, tag: str | None = None):
     payload = {
-        "inputs": {},
+        "inputs": {"tag": tag or "daily"},
         "query": text,
         "response_mode": "blocking",
         "user": user_key,
@@ -118,12 +130,49 @@ def dify_send_message(user_key: str, text: str, conversation_id: str | None = No
     logger.info(f"[Dify] status={resp.status_code} body={resp.text[:2000]}")
     return resp
 
-# ---------- Обработка сообщений ----------
+def build_individual_report(user_key: str, summary: str, tag: str):
+    today = date.today().isoformat()
+    team_id = find_team_id_vk(user_key)
+    team = TEAMS.get(team_id, {})
+    full_name = USERS.get(user_key, "Неизвестный Пользователь")
+    first, last = (full_name.split() + ["Unknown", "Unknown"])[:2]
+
+    # Транслитерация
+    first_latin = translit(first, 'ru', reversed=True)
+    last_latin = translit(last, 'ru', reversed=True)
+
+    file_name = f"{tag.capitalize()}_Report_{first_latin}_{last_latin}_{today}.json"
+
+    report = {
+        "version": "1.0",
+        "report_date_utc": today,
+        "source": {
+            "bot": "meetings_dify_bot",
+            "tag": tag
+        },
+        "teams": [
+            {
+                "team_name": team.get("team_name"),
+                "tag": tag,
+                "managers": team.get("managers", []),
+                "members": [
+                    {
+                        "e-mail": user_key,
+                        "full_name": full_name,
+                        "summary": {
+                            "text": summary
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+
+    return report, file_name
+
 async def on_message(event: Event, bot: Bot):
     chat_id = getattr(event.chat, "chatId", None)
     from_id = getattr(event.from_, "userId", None) if hasattr(event, "from_") else None
-    first_name = getattr(event.from_, "firstName", None)
-    last_name = getattr(event.from_, "lastName", None)
     user_text = getattr(event, "text", "") or ""
 
     user_key = from_id or chat_id
@@ -133,55 +182,61 @@ async def on_message(event: Event, bot: Bot):
 
     logger.info(f"Incoming VK Teams message from {user_key}: {user_text}")
 
+    today_str = date.today().isoformat()
+    if last_date.get(user_key) != today_str:
+        conversation_ids.pop(user_key, None)
+        last_date[user_key] = today_str
+        logger.info(f"[Dify] Новый день для {user_key} — сброшен conversation_id")
+
+    tag = determine_tag(user_key)
+    user_text_tagged = f"Тег: {tag}\n{user_text}"
+
     conv_id = conversation_ids.get(user_key)
     if not conv_id:
         conv_id = dify_get_conversation_id(user_key)
         if conv_id:
             conversation_ids[user_key] = conv_id
 
-    # Первый вызов — с conv_id
-    resp = dify_send_message(user_key, user_text, conv_id)
+    resp = dify_send_message(user_key, user_text_tagged, conv_id, tag=tag)
 
-    # Если ошибка 400 → fallback без conv_id
     if resp is not None and resp.status_code == 400:
         logger.warning(f"[Dify] 400 error — retrying without conversation_id for {user_key}")
-        resp = dify_send_message(user_key, user_text, None)
+        resp = dify_send_message(user_key, user_text_tagged, None, tag=tag)
 
-    # Обработка ответа
     if resp is not None and resp.ok:
         body = resp.json()
         answer_text = body.get("answer", "") or ""
         new_conv_id = body.get("conversation_id")
-
         if new_conv_id:
-            conversation_ids[user_key] = new_conv_id  # обновляем
+            conversation_ids[user_key] = new_conv_id
 
         if is_confirmation(user_text) and ("sum" in answer_text.lower()):
             summary = clean_summary(answer_text)
-            first_clean = first_name.split()[0] if first_name else ""
-            display_name = f"{first_clean} {last_name or ''}".strip() or "Неизвестный"
 
             try:
                 with open("answers.json", "r", encoding="utf-8") as f:
-                    try:
-                        answers = json.load(f)
-                    except json.JSONDecodeError:
-                        logger.warning("[FILE] answers.json пустой или повреждён — пересоздаём")
-                        answers = {}
-            except FileNotFoundError:
+                    answers = json.load(f)
+            except Exception:
                 answers = {}
 
             answers[user_key] = {
-                "name": display_name,
+                "name": USERS.get(user_key, "Неизвестный"),
                 "summary": summary
             }
 
             try:
                 with open("answers.json", "w", encoding="utf-8") as f:
                     json.dump(answers, f, ensure_ascii=False, indent=2)
-                logger.info(f"[FILE] answers.json успешно сохранён в {os.path.abspath('answers.json')}")
+                logger.info(f"[FILE] answers.json обновлён")
             except Exception as e:
-                logger.error(f"[FILE] answers.json write error: {e}")
+                logger.error(f"[FILE] write error: {e}")
+
+            try:
+                payload, file_name = build_individual_report(user_key, summary, tag)
+                upload_json_to_task(payload, file_name)
+                logger.info(f"[PYRUS] Файл {file_name} отправлен в Pyrus")
+            except Exception as e:
+                logger.error(f"[PYRUS] Ошибка загрузки отчёта в Pyrus: {e}")
 
             reply = "✅ Спасибо! Отчёт сохранён."
         else:
@@ -194,7 +249,6 @@ async def on_message(event: Event, bot: Bot):
     except Exception as e:
         logger.error(f"[VK] send_text error: {e}")
 
-# ---------- Запуск бота ----------
 async def main():
     bot = Bot(bot_token=VK_TEAMS_TOKEN, url=VK_TEAMS_API_BASE)
     bot.dispatcher.add_handler(CommandHandler(callback=on_message, filters=Filter.command("/start")))
