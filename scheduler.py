@@ -23,16 +23,22 @@ MSK = pytz.timezone("Europe/Moscow")
 # Вопросы
 QUESTION_SETS = {
     "daily_start": [
+        "Доброе утро! ☀️\n\n"
+        "Пожалуйста, ответьте на 3 вопроса:\n"
         "Что делал в пятницу?",
         "Что планируешь сегодня?",
         "Есть ли блокеры?"
     ],
     "daily_regular": [
+        "Доброе утро! ☀️\n\n"
+        "Пожалуйста, ответьте на 3 вопроса:\n"
         "Что ты сделал вчера?",
         "Что планируешь сегодня?",
         "Есть ли блокеры?"
     ],
     "weekly": [
+        "Привет! ☀️\n\n"
+        "Пожалуйста, ответьте на 3 вопроса:\n"
         "Что ты делал на этой неделе?",
         "Что планируешь делать на следующей?",
         "Есть ли блокеры?"
@@ -130,13 +136,11 @@ schedule.every().monday.at("09:00").do(job_send_questions, team_id=1, key="daily
 schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().thursday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
-schedule.every().friday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 
 schedule.every().monday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().tuesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().wednesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().thursday.at("09:30").do(job_send_report, team_id=1)
-schedule.every().friday.at("09:30").do(job_send_report, team_id=1)
 
 schedule.every().monday.at("11:00").do(job_send_report, team_id=2)
 schedule.every().wednesday.at("11:00").do(job_send_report, team_id=2)
