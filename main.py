@@ -5,7 +5,7 @@ import logging
 import os
 import re
 import json
-from datetime import date
+from datetime import date, timedelta
 from urllib.parse import urlsplit
 from dotenv import load_dotenv
 import requests
@@ -75,9 +75,7 @@ def find_team_id_vk(user_key: str) -> int | None:
     return None
 
 def get_dify_headers(user_key: str) -> dict:
-    weekday = date.today().weekday()
     team_id = find_team_id_vk(user_key)
-
     if team_id == 3:
         api_key = DIFY_API_KEY_WEEKLY
     else:
@@ -88,6 +86,15 @@ def get_dify_headers(user_key: str) -> dict:
         "Content-Type": "application/json",
     }
 
+# ---------- Работа с датами ----------
+def get_week_range_str(today: date) -> str:
+    """
+    Вернуть строку вида YYYY-MM-DD–YYYY-MM-DD для текущей недели (пн–пт).
+    """
+    monday = today - timedelta(days=today.weekday())   # понедельник
+    friday = monday + timedelta(days=4)                # пятница
+    return f"{monday.isoformat()}-{friday.isoformat()}"
+
 # ---------- Работа с ответом и JSON ----------
 def clean_summary(answer_text: str) -> str:
     lines = (answer_text or "").splitlines()
@@ -97,7 +104,7 @@ def clean_summary(answer_text: str) -> str:
     return (answer_text or "").strip()
 
 def build_individual_report(user_key: str, summary: str):
-    today = date.today().isoformat()
+    today = date.today()
     team_id = find_team_id_vk(user_key)
     team = TEAMS.get(team_id, {})
     tag = "weekly" if team_id == 3 else "daily"
@@ -109,11 +116,16 @@ def build_individual_report(user_key: str, summary: str):
     first_latin = translit(first, 'ru', reversed=True)
     last_latin = translit(last, 'ru', reversed=True)
 
-    file_name = f"{tag.capitalize()}_report_{first_latin}_{last_latin}_{today}.json"
+    if tag == "weekly":
+        report_date = get_week_range_str(today)
+        file_name = f"Weekly_report_{first_latin}_{last_latin}_{report_date}.json"
+    else:
+        report_date = today.isoformat()
+        file_name = f"Daily_report_{first_latin}_{last_latin}_{report_date}.json"
 
     report = {
         "version": "1.0",
-        "report_date_utc": today,
+        "report_date_utc": report_date,
         "source": {
             "bot": "meetings_dify_bot",
             "tag": tag
