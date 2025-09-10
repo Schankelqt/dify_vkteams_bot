@@ -4,7 +4,7 @@ import os
 import json
 import schedule
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from dotenv import load_dotenv
 import asyncio
@@ -20,7 +20,7 @@ VK_TEAMS_API_BASE = os.getenv("VK_TEAMS_API_BASE")
 # Временная зона
 MSK = pytz.timezone("Europe/Moscow")
 
-# Вопросы
+
 QUESTION_SETS = {
     "daily_start": [
         "Доброе утро! ☀️\n\n"
@@ -45,7 +45,6 @@ QUESTION_SETS = {
     ]
 }
 
-
 def load_answers() -> dict:
     try:
         with open("answers.json", "r", encoding="utf-8") as f:
@@ -53,25 +52,50 @@ def load_answers() -> dict:
     except Exception:
         return {}
 
+def save_answers(data: dict):
+    with open("answers.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
-def build_report(team_id: int, date_str: str) -> str:
+def clean_stale_answers(today_str: str, team_id: int):
+    answers = load_answers()
+    updated = {}
+
+    if team_id in (1, 2):
+        # Daily: оставить только ответы за сегодня
+        updated = {
+            uid: info for uid, info in answers.items()
+            if info.get("team_id") == team_id and info.get("date") == today_str
+        }
+    elif team_id == 3:
+        # Weekly: оставить ответы, полученные начиная со среды этой недели
+        today = datetime.strptime(today_str, "%Y-%m-%d").date()
+        monday = today - timedelta(days=today.weekday())  # Понедельник
+        wednesday = monday + timedelta(days=2)
+        updated = {
+            uid: info for uid, info in answers.items()
+            if info.get("team_id") == 3 and datetime.strptime(info.get("date", "1970-01-01"), "%Y-%m-%d").date() >= wednesday
+        }
+
+    save_answers(updated)
+
+def build_text_report(team_id: int, date_str: str) -> str:
+    clean_stale_answers(date_str, team_id)
     answers = load_answers()
     team = TEAMS.get(team_id)
     report_lines = [f"📝 Отчёт по команде «{team['team_name']}» за {date_str}"]
-    any_found = False
-    for user_id in team.get("members", {}):
+
+    responded = 0
+    total = len(team.get("members", {}))
+
+    for user_id, full_name in team.get("members", {}).items():
         entry = answers.get(user_id)
-        if not entry:
-            continue
-        summary = entry.get("summary")
-        if not summary:
-            continue
-        name_parts = entry.get("name", user_id).split()
-        name = name_parts[0] + " " + name_parts[-1]
+        summary = entry.get("summary") if entry else "-"
+        name = full_name.strip()
         report_lines.append(f"\n👤 *{name}*\n{summary}")
-        any_found = True
-    if not any_found:
-        report_lines.append("\n(Нет ответов от участников)")
+        if entry:
+            responded += 1
+
+    report_lines.append(f"\n📊 Отчитались: {responded}/{total}")
     return "\n".join(report_lines)
 
 
@@ -93,7 +117,6 @@ async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 10
         except Exception as e:
             print(f"⚠️ Ошибка при отправке части {i+1} → {chat_id}: {e}")
 
-
 async def send_questions(team_id: int, question_key: str):
     team = TEAMS.get(team_id)
     if not team:
@@ -110,9 +133,8 @@ async def send_questions(team_id: int, question_key: str):
         except Exception as e:
             print(f"⚠️ Ошибка при отправке → {user_id}: {e}")
 
-
 async def send_report(team_id: int, date_str: str):
-    report_text = build_report(team_id, date_str)
+    report_text = build_text_report(team_id, date_str)
     bot = Bot(bot_token=VK_TEAMS_TOKEN, url=VK_TEAMS_API_BASE)
     for manager_id in TEAMS[team_id].get("managers", []):
         try:
@@ -120,18 +142,14 @@ async def send_report(team_id: int, date_str: str):
         except Exception as e:
             print(f"⚠️ Ошибка при отправке отчёта → {manager_id}: {e}")
 
-
-# Обёртки для schedule (так как он не async)
 def job_send_questions(team_id: int, key: str):
     asyncio.run(send_questions(team_id, key))
-
 
 def job_send_report(team_id: int):
     today = datetime.now(MSK).strftime("%Y-%m-%d")
     asyncio.run(send_report(team_id, today))
 
-
-# Расписание для всех команд (время — MSK)
+# --- Расписание ---
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=1, key="daily_start")
 schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
@@ -142,13 +160,13 @@ schedule.every().tuesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().wednesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().thursday.at("09:30").do(job_send_report, team_id=1)
 
-schedule.every().monday.at("11:00").do(job_send_report, team_id=2)
-schedule.every().wednesday.at("11:00").do(job_send_report, team_id=2)
-schedule.every().friday.at("11:00").do(job_send_report, team_id=2)
-
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=2, key="daily_start")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=2, key="daily_regular")
 schedule.every().friday.at("09:00").do(job_send_questions, team_id=2, key="daily_regular")
+
+schedule.every().monday.at("11:00").do(job_send_report, team_id=2)
+schedule.every().wednesday.at("11:00").do(job_send_report, team_id=2)
+schedule.every().friday.at("11:00").do(job_send_report, team_id=2)
 
 schedule.every().wednesday.at("15:00").do(job_send_questions, team_id=3, key="weekly")
 schedule.every().thursday.at("10:00").do(job_send_report, team_id=3)

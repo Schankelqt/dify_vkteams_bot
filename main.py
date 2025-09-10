@@ -1,9 +1,10 @@
+# main.py
+
 import asyncio
 import logging
 import os
 import re
 import json
-import hashlib
 from datetime import date
 from urllib.parse import urlsplit
 from dotenv import load_dotenv
@@ -15,11 +16,11 @@ from vk_teams_async_bot.events import Event
 from vk_teams_async_bot.handler import CommandHandler, MessageHandler
 from vk_teams_async_bot.filter import Filter
 
-from users import TEAMS, USERS
+from users import USERS, TEAMS
 from pyrus_client import upload_json_to_task
 
 # ---------- Логирование ----------
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("vk_teams_main")
 
 # ---------- Переменные окружения ----------
@@ -35,21 +36,15 @@ VK_TEAMS_TOKEN = _env("VK_TEAMS_TOKEN")
 _raw_base = _env("VK_TEAMS_API_BASE")
 _s = urlsplit(_raw_base)
 VK_TEAMS_API_BASE = f"{_s.scheme}://{_s.netloc}"
-if VK_TEAMS_API_BASE != _raw_base:
-    logger.warning(f"VK_TEAMS_API_BASE normalized: {_raw_base!r} -> {VK_TEAMS_API_BASE!r}")
 
-DIFY_API_KEY = _env("DIFY_API_KEY")
 DIFY_API_URL = _env("DIFY_API_URL").rstrip("/")
-logger.info(f"[Dify] base url = {DIFY_API_URL}")
-
-DIFY_HEADERS = {
-    "Authorization": f"Bearer {DIFY_API_KEY}",
-    "Content-Type": "application/json",
-}
+DIFY_API_KEY_DAILY = _env("DIFY_API_KEY_DAILY")
+DIFY_API_KEY_WEEKLY = _env("DIFY_API_KEY_WEEKLY")
 
 conversation_ids: dict[str, str] = {}
 last_date: dict[str, str] = {}
 
+# ---------- Подтверждающие фразы ----------
 CONFIRMATION_PHRASES = {
     "да", "да все верно", "да, все верно", "все верно", "всё верно",
     "подтверждаю", "подтверждаю все", "подтверждаю вариант",
@@ -72,29 +67,28 @@ def normalize_confirmation(s: str) -> str:
 def is_confirmation(text: str) -> bool:
     return normalize_confirmation(text) in CONFIRMATION_PHRASES
 
-def to_numeric_id(user_key: str) -> int:
-    h = hashlib.sha1(user_key.encode("utf-8")).digest()
-    return int.from_bytes(h[:8], "big", signed=False)
-
+# ---------- Определение команды и API-ключей ----------
 def find_team_id_vk(user_key: str) -> int | None:
     for team_id, team_data in TEAMS.items():
         if user_key in team_data.get("members", {}):
             return team_id
     return None
 
-def determine_tag(user_key: str) -> str:
-    team_id = find_team_id_vk(user_key)
-    if team_id is None:
-        return "daily"
-    team = TEAMS.get(team_id, {})
-    tag = team.get("tag", "daily").lower()
+def get_dify_headers(user_key: str) -> dict:
     weekday = date.today().weekday()
-    if tag == "weekly":
-        return "weekly"
-    elif tag == "daily":
-        return "friday" if weekday == 0 else "daily"
-    return "daily"
+    team_id = find_team_id_vk(user_key)
 
+    if team_id == 3:
+        api_key = DIFY_API_KEY_WEEKLY
+    else:
+        api_key = DIFY_API_KEY_DAILY
+
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+# ---------- Работа с ответом и JSON ----------
 def clean_summary(answer_text: str) -> str:
     lines = (answer_text or "").splitlines()
     for i, line in enumerate(lines):
@@ -102,38 +96,12 @@ def clean_summary(answer_text: str) -> str:
             return "\n".join(lines[i+1:]).strip()
     return (answer_text or "").strip()
 
-def dify_get_conversation_id(user_key: str) -> str | None:
-    url = f"{DIFY_API_URL}/conversations"
-    try:
-        resp = requests.get(url, headers=DIFY_HEADERS, params={"user": user_key}, timeout=20)
-        resp.raise_for_status()
-        data = resp.json()
-        logger.info(f"[Dify] get_conversation_id for {user_key}: {data}")
-        items = data.get("data") or []
-        if items:
-            return items[0]["id"]
-    except Exception as e:
-        logger.error(f"[Dify] get_conversation_id error for {user_key}: {e}")
-    return None
-
-def dify_send_message(user_key: str, text: str, conversation_id: str | None = None, tag: str | None = None):
-    payload = {
-        "inputs": {"tag": tag or "daily"},
-        "query": text,
-        "response_mode": "blocking",
-        "user": user_key,
-    }
-    if conversation_id:
-        payload["conversation_id"] = conversation_id
-    url = f"{DIFY_API_URL}/chat-messages"
-    resp = requests.post(url, headers=DIFY_HEADERS, json=payload, timeout=60)
-    logger.info(f"[Dify] status={resp.status_code} body={resp.text[:2000]}")
-    return resp
-
-def build_individual_report(user_key: str, summary: str, tag: str):
+def build_individual_report(user_key: str, summary: str):
     today = date.today().isoformat()
     team_id = find_team_id_vk(user_key)
     team = TEAMS.get(team_id, {})
+    tag = "weekly" if team_id == 3 else "daily"
+
     full_name = USERS.get(user_key, "Неизвестный Пользователь")
     first, last = (full_name.split() + ["Unknown", "Unknown"])[:2]
 
@@ -141,7 +109,7 @@ def build_individual_report(user_key: str, summary: str, tag: str):
     first_latin = translit(first, 'ru', reversed=True)
     last_latin = translit(last, 'ru', reversed=True)
 
-    file_name = f"{tag.capitalize()}_Report_{first_latin}_{last_latin}_{today}.json"
+    file_name = f"{tag.capitalize()}_report_{first_latin}_{last_latin}_{today}.json"
 
     report = {
         "version": "1.0",
@@ -170,6 +138,35 @@ def build_individual_report(user_key: str, summary: str, tag: str):
 
     return report, file_name
 
+# ---------- Работа с Dify ----------
+def dify_get_conversation_id(user_key: str, headers: dict) -> str | None:
+    url = f"{DIFY_API_URL}/conversations"
+    try:
+        resp = requests.get(url, headers=headers, params={"user": user_key}, timeout=20)
+        resp.raise_for_status()
+        data = resp.json()
+        items = data.get("data") or []
+        if items:
+            return items[0]["id"]
+    except Exception as e:
+        logger.error(f"[Dify] get_conversation_id error for {user_key}: {e}")
+    return None
+
+def dify_send_message(user_key: str, text: str, headers: dict, conversation_id: str | None = None):
+    payload = {
+        "query": text,
+        "response_mode": "blocking",
+        "inputs": {},
+        "user": user_key,
+    }
+    if conversation_id:
+        payload["conversation_id"] = conversation_id
+    url = f"{DIFY_API_URL}/chat-messages"
+    resp = requests.post(url, headers=headers, json=payload, timeout=60)
+    logger.info(f"[Dify] status={resp.status_code} body={resp.text[:1500]}")
+    return resp
+
+# ---------- Обработка сообщений ----------
 async def on_message(event: Event, bot: Bot):
     chat_id = getattr(event.chat, "chatId", None)
     from_id = getattr(event.from_, "userId", None) if hasattr(event, "from_") else None
@@ -188,20 +185,18 @@ async def on_message(event: Event, bot: Bot):
         last_date[user_key] = today_str
         logger.info(f"[Dify] Новый день для {user_key} — сброшен conversation_id")
 
-    tag = determine_tag(user_key)
-    user_text_tagged = f"Тег: {tag}\n{user_text}"
-
+    headers = get_dify_headers(user_key)
     conv_id = conversation_ids.get(user_key)
     if not conv_id:
-        conv_id = dify_get_conversation_id(user_key)
+        conv_id = dify_get_conversation_id(user_key, headers)
         if conv_id:
             conversation_ids[user_key] = conv_id
 
-    resp = dify_send_message(user_key, user_text_tagged, conv_id, tag=tag)
+    resp = dify_send_message(user_key, user_text, headers, conv_id)
 
     if resp is not None and resp.status_code == 400:
         logger.warning(f"[Dify] 400 error — retrying without conversation_id for {user_key}")
-        resp = dify_send_message(user_key, user_text_tagged, None, tag=tag)
+        resp = dify_send_message(user_key, user_text, headers)
 
     if resp is not None and resp.ok:
         body = resp.json()
@@ -212,7 +207,7 @@ async def on_message(event: Event, bot: Bot):
 
         if is_confirmation(user_text) and ("sum" in answer_text.lower()):
             summary = clean_summary(answer_text)
-
+            team_id = find_team_id_vk(user_key)
             try:
                 with open("answers.json", "r", encoding="utf-8") as f:
                     answers = json.load(f)
@@ -221,7 +216,9 @@ async def on_message(event: Event, bot: Bot):
 
             answers[user_key] = {
                 "name": USERS.get(user_key, "Неизвестный"),
-                "summary": summary
+                "summary": summary,
+                "date": date.today().isoformat(),
+                "team_id": team_id
             }
 
             try:
@@ -232,7 +229,7 @@ async def on_message(event: Event, bot: Bot):
                 logger.error(f"[FILE] write error: {e}")
 
             try:
-                payload, file_name = build_individual_report(user_key, summary, tag)
+                payload, file_name = build_individual_report(user_key, summary)
                 upload_json_to_task(payload, file_name)
                 logger.info(f"[PYRUS] Файл {file_name} отправлен в Pyrus")
             except Exception as e:
@@ -249,6 +246,7 @@ async def on_message(event: Event, bot: Bot):
     except Exception as e:
         logger.error(f"[VK] send_text error: {e}")
 
+# ---------- Запуск ----------
 async def main():
     bot = Bot(bot_token=VK_TEAMS_TOKEN, url=VK_TEAMS_API_BASE)
     bot.dispatcher.add_handler(CommandHandler(callback=on_message, filters=Filter.command("/start")))
