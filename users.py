@@ -6,7 +6,7 @@ TEAMS = {
         "members": {
             "vostrikovkk@sovcombank.ru": "Кирилл Востриков",
         },
-        "managers": ["vostrikovkk@sovcombank.ru","maslenikea@sovcombank.ru"],
+        "managers": ["vostrikovkk@sovcombank.ru"],
     },
     2: {
         "team_name": "Отдел бизнес-анализа операций на финансовых рынках",
@@ -14,7 +14,7 @@ TEAMS = {
         "members": {
             "baroninap@sovcombank.ru": "Антон Баронин",
         },
-        "managers": ["vostrikovkk@sovcombank.ru","chalikea@sovcombank.ru"],
+        "managers": ["vostrikovkk@sovcombank.ru"],
     },
     3: {
         "team_name": "Отдел бизнес-анализа брокерских операций",
@@ -22,7 +22,7 @@ TEAMS = {
         "members": {
             "voschenkovis@sovcombank.ru": "Илья Вощенков",
         },
-        "managers": ["vostrikovkk@sovcombank.ru","ochkinav@sovcombank.ru"],
+        "managers": ["vostrikovkk@sovcombank.ru"],
     },
 }
 

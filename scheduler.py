@@ -55,20 +55,28 @@ def save_answers(data: dict):
     with open("answers.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def clean_stale_answers(today_str: str, team_id: int):
+def clean_team_answers(today_str: str, team_id: int):
     """
-    Для daily (команды 1 и 2) и weekly (команда 3):
-    очищаем все старые ответы, оставляем только сегодняшние.
+    Чистим только по members конкретной команды.
+    Сохраняем ответы этой команды, которые были даны сегодня.
+    Остальные команды не трогаем.
     """
     answers = load_answers()
-    updated = {
-        uid: info for uid, info in answers.items()
-        if info.get("team_id") == team_id and info.get("date") == today_str
-    }
+    team = TEAMS.get(team_id, {})
+    members = set(team.get("members", {}).keys())
+
+    updated = {}
+    for uid, info in answers.items():
+        if uid in members:
+            if info.get("date") == today_str:
+                updated[uid] = info
+        else:
+            # не трогаем других сотрудников (другие команды)
+            updated[uid] = info
+
     save_answers(updated)
 
 def build_text_report(team_id: int, date_str: str) -> str:
-    clean_stale_answers(date_str, team_id)
     answers = load_answers()
     team = TEAMS.get(team_id)
     report_lines = [f"📝 Отчёт по команде «{team['team_name']}» за {date_str}"]
@@ -88,7 +96,6 @@ def build_text_report(team_id: int, date_str: str) -> str:
     return "\n".join(report_lines)
 
 async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 1000):
-  
     chunks = []
     while text:
         part = text[:chunk_size]
@@ -131,9 +138,10 @@ async def send_report(team_id: int, date_str: str):
         except Exception as e:
             print(f"⚠️ Ошибка при отправке отчёта → {manager_id}: {e}")
 
+    # После отправки отчёта чистим ответы этой команды
+    clean_team_answers(date_str, team_id)
+
 def job_send_questions(team_id: int, key: str):
-    today = datetime.now(MSK).strftime("%Y-%m-%d")
-    clean_stale_answers(today, team_id)  # очистка до вопросов
     asyncio.run(send_questions(team_id, key))
 
 def job_send_report(team_id: int):
@@ -146,26 +154,26 @@ schedule.every().monday.at("09:00").do(job_send_questions, team_id=1, key="daily
 schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().thursday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
-schedule.every().friday.at("15:10").do(job_send_questions, team_id=1, key="daily_regular")
+schedule.every().friday.at("16:00").do(job_send_questions, team_id=1, key="daily_regular")
 
 schedule.every().monday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().tuesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().wednesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().thursday.at("09:30").do(job_send_report, team_id=1)
-schedule.every().friday.at("15:20").do(job_send_report, team_id=1)
+schedule.every().friday.at("16:10").do(job_send_report, team_id=1)
 
 # Команда 2 (Daily)
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=2, key="daily_start")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=2, key="daily_regular")
-schedule.every().friday.at("15:10").do(job_send_questions, team_id=2, key="daily_regular")
+schedule.every().friday.at("16:00").do(job_send_questions, team_id=2, key="daily_regular")
 
 schedule.every().monday.at("11:00").do(job_send_report, team_id=2)
 schedule.every().wednesday.at("11:00").do(job_send_report, team_id=2)
-schedule.every().friday.at("15:20").do(job_send_report, team_id=2)
+schedule.every().friday.at("16:10").do(job_send_report, team_id=2)
 
-# Команда 3 (Weekly → теперь среда 15:00 вопросы, среда 22:00 отчёт)
-schedule.every().friday.at("15:10").do(job_send_questions, team_id=3, key="weekly")
-schedule.every().friday.at("15:20").do(job_send_report, team_id=3)
+# Команда 3 (Weekly)
+schedule.every().friday.at("16:00").do(job_send_questions, team_id=3, key="weekly")
+schedule.every().friday.at("16:10").do(job_send_report, team_id=3)
 
 print("🕒 Планировщик запущен. Ожидание задач...")
 while True:
