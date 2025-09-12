@@ -179,7 +179,7 @@ def dify_send_message(user_key: str, text: str, headers: dict, conversation_id: 
     return resp
 
 # ---------- Отправка длинного текста ----------
-async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 4046):
+async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 1000):
     chunks = []
     while text:
         part = text[:chunk_size]

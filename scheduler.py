@@ -87,10 +87,8 @@ def build_text_report(team_id: int, date_str: str) -> str:
     report_lines.append(f"\n📊 Отчитались: {responded}/{total}")
     return "\n".join(report_lines)
 
-async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 4046):
-    """
-    Отправка длинного текста частями с учётом лимита VK Teams API (4096 символов).
-    """
+async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 1000):
+  
     chunks = []
     while text:
         part = text[:chunk_size]
