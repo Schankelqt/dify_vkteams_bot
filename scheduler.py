@@ -4,7 +4,7 @@ import os
 import json
 import schedule
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 import pytz
 from dotenv import load_dotenv
 import asyncio
@@ -19,7 +19,6 @@ VK_TEAMS_API_BASE = os.getenv("VK_TEAMS_API_BASE")
 
 # Временная зона
 MSK = pytz.timezone("Europe/Moscow")
-
 
 QUESTION_SETS = {
     "daily_start": [
@@ -57,25 +56,15 @@ def save_answers(data: dict):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def clean_stale_answers(today_str: str, team_id: int):
+    """
+    Для daily (команды 1 и 2) и weekly (команда 3):
+    очищаем все старые ответы, оставляем только сегодняшние.
+    """
     answers = load_answers()
-    updated = {}
-
-    if team_id in (1, 2):
-        # Daily: оставить только ответы за сегодня
-        updated = {
-            uid: info for uid, info in answers.items()
-            if info.get("team_id") == team_id and info.get("date") == today_str
-        }
-    elif team_id == 3:
-        # Weekly: оставить ответы, полученные начиная со среды этой недели
-        today = datetime.strptime(today_str, "%Y-%m-%d").date()
-        monday = today - timedelta(days=today.weekday())  # Понедельник
-        wednesday = monday + timedelta(days=2)
-        updated = {
-            uid: info for uid, info in answers.items()
-            if info.get("team_id") == 3 and datetime.strptime(info.get("date", "1970-01-01"), "%Y-%m-%d").date() >= wednesday
-        }
-
+    updated = {
+        uid: info for uid, info in answers.items()
+        if info.get("team_id") == team_id and info.get("date") == today_str
+    }
     save_answers(updated)
 
 def build_text_report(team_id: int, date_str: str) -> str:
@@ -98,8 +87,10 @@ def build_text_report(team_id: int, date_str: str) -> str:
     report_lines.append(f"\n📊 Отчитались: {responded}/{total}")
     return "\n".join(report_lines)
 
-
-async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 1000):
+async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 4046):
+    """
+    Отправка длинного текста частями с учётом лимита VK Teams API (4096 символов).
+    """
     chunks = []
     while text:
         part = text[:chunk_size]
@@ -143,6 +134,8 @@ async def send_report(team_id: int, date_str: str):
             print(f"⚠️ Ошибка при отправке отчёта → {manager_id}: {e}")
 
 def job_send_questions(team_id: int, key: str):
+    today = datetime.now(MSK).strftime("%Y-%m-%d")
+    clean_stale_answers(today, team_id)  # очистка до вопросов
     asyncio.run(send_questions(team_id, key))
 
 def job_send_report(team_id: int):
@@ -150,6 +143,7 @@ def job_send_report(team_id: int):
     asyncio.run(send_report(team_id, today))
 
 # --- Расписание ---
+# Команда 1 (Daily)
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=1, key="daily_start")
 schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
@@ -160,6 +154,7 @@ schedule.every().tuesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().wednesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().thursday.at("09:30").do(job_send_report, team_id=1)
 
+# Команда 2 (Daily)
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=2, key="daily_start")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=2, key="daily_regular")
 schedule.every().friday.at("09:00").do(job_send_questions, team_id=2, key="daily_regular")
@@ -168,8 +163,9 @@ schedule.every().monday.at("11:00").do(job_send_report, team_id=2)
 schedule.every().wednesday.at("11:00").do(job_send_report, team_id=2)
 schedule.every().friday.at("11:00").do(job_send_report, team_id=2)
 
+# Команда 3 (Weekly → теперь среда 15:00 вопросы, среда 22:00 отчёт)
 schedule.every().wednesday.at("15:00").do(job_send_questions, team_id=3, key="weekly")
-schedule.every().thursday.at("10:00").do(job_send_report, team_id=3)
+schedule.every().wednesday.at("22:00").do(job_send_report, team_id=3)
 
 print("🕒 Планировщик запущен. Ожидание задач...")
 while True:

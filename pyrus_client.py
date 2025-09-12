@@ -2,37 +2,58 @@
 
 import os
 import requests
+import time
 from dotenv import load_dotenv
 
 # Загрузка .env
 load_dotenv()
 
-# Прокси URL для загрузки JSON-файла в задачу Pyrus
-PROXY_UPLOAD_URL = os.getenv("PYRUS_UPLOAD_PROXY_URL")  # Пример: https://aimatrix-e8zs.onrender.com/upload_files_pyrus
-TASK_ID = os.getenv("PYRUS_TARGET_TASK_ID")  # Пример: 106315912
+# Прокси URL
+PROXY_UPLOAD_URL = os.getenv("PYRUS_UPLOAD_PROXY_URL")
 
-if not PROXY_UPLOAD_URL or not TASK_ID:
-    raise RuntimeError("PYRUS_UPLOAD_PROXY_URL и PYRUS_TARGET_TASK_ID должны быть заданы в .env")
+# Разные задачи
+TASK_ID_DAILY = os.getenv("PYRUS_TARGET_TASK_ID_DAILY")
+TASK_ID_WEEKLY = os.getenv("PYRUS_TARGET_TASK_ID_WEEKLY")
 
-def upload_json_to_task(json_data: dict, file_name: str):
+if not PROXY_UPLOAD_URL or not TASK_ID_DAILY or not TASK_ID_WEEKLY:
+    raise RuntimeError(
+        "Нужно задать PYRUS_UPLOAD_PROXY_URL, PYRUS_TARGET_TASK_ID_DAILY и PYRUS_TARGET_TASK_ID_WEEKLY в .env"
+    )
+
+
+def upload_json_to_task(json_data: dict, file_name: str, team_id: int):
     """
-    Загружает JSON-отчёт в Pyrus через прокси эндпоинт
-    :param json_data: словарь JSON-отчёта
-    :param file_name: имя файла (с расширением .json)
+    Загружает JSON-отчёт в Pyrus через прокси эндпоинт.
+    Для команд 1–2 (daily) → Daily задача.
+    Для команды 3 (weekly) → Weekly задача.
+    При неудаче (например, timeout) пытается снова каждые 5 минут до успеха.
     """
+
+    if team_id == 3:
+        task_id = int(TASK_ID_WEEKLY)
+    else:
+        task_id = int(TASK_ID_DAILY)
+
     payload = {
         "filename": file_name,
-        "task_id": int(TASK_ID),
+        "task_id": task_id,
         "body": json_data
     }
 
-    print(f"📤 Отправка {file_name} в Pyrus (задача {TASK_ID})…")
-    try:
-        resp = requests.post(PROXY_UPLOAD_URL, json=payload, timeout=30)
-        print(f"🔁 Статус: {resp.status_code}")
-        if not resp.ok:
-            print(f"⚠️ Ошибка: {resp.text[:1000]}")
-        else:
-            print("✅ Успешно загружено!")
-    except requests.RequestException as e:
-        print(f"❌ Ошибка при загрузке: {e}")
+    attempt = 1
+    while True:
+        print(f"📤 [{attempt}] Отправка {file_name} в Pyrus (задача {task_id})…")
+        try:
+            resp = requests.post(PROXY_UPLOAD_URL, json=payload, timeout=90)
+            print(f"🔁 [{attempt}] Статус: {resp.status_code}")
+            if resp.ok:
+                print("✅ Успешно загружено!")
+                break
+            else:
+                print(f"⚠️ [{attempt}] Ошибка: {resp.text[:1000]}")
+        except requests.RequestException as e:
+            print(f"❌ [{attempt}] Ошибка при загрузке: {e}")
+
+        attempt += 1
+        print("⏳ Ожидание 5 минут перед повтором...")
+        time.sleep(5 * 60)  # 5 минут

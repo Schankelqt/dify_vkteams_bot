@@ -178,6 +178,25 @@ def dify_send_message(user_key: str, text: str, headers: dict, conversation_id: 
     logger.info(f"[Dify] status={resp.status_code} body={resp.text[:1500]}")
     return resp
 
+# ---------- Отправка длинного текста ----------
+async def send_long_text(bot: Bot, chat_id: str, text: str, chunk_size: int = 4046):
+    chunks = []
+    while text:
+        part = text[:chunk_size]
+        last_nl = part.rfind("\n")
+        if last_nl > 0 and len(text) > chunk_size:
+            part = text[:last_nl]
+        chunks.append(part.strip())
+        text = text[len(part):].lstrip()
+
+    for i, part in enumerate(chunks):
+        header = f"(Часть {i+1}/{len(chunks)})\n" if len(chunks) > 1 else ""
+        try:
+            await bot.send_text(chat_id=chat_id, text=header + part)
+            await asyncio.sleep(1)
+        except Exception as e:
+            logger.error(f"[VK] send_text error part {i+1}: {e}")
+
 # ---------- Обработка сообщений ----------
 async def on_message(event: Event, bot: Bot):
     chat_id = getattr(event.chat, "chatId", None)
@@ -242,7 +261,7 @@ async def on_message(event: Event, bot: Bot):
 
             try:
                 payload, file_name = build_individual_report(user_key, summary)
-                upload_json_to_task(payload, file_name)
+                upload_json_to_task(payload, file_name, team_id)
                 logger.info(f"[PYRUS] Файл {file_name} отправлен в Pyrus")
             except Exception as e:
                 logger.error(f"[PYRUS] Ошибка загрузки отчёта в Pyrus: {e}")
@@ -254,7 +273,7 @@ async def on_message(event: Event, bot: Bot):
         reply = "⚠️ Ошибка при обращении к Dify"
 
     try:
-        await bot.send_text(chat_id=chat_id, text=reply)
+        await send_long_text(bot, chat_id=chat_id, text=reply)
     except Exception as e:
         logger.error(f"[VK] send_text error: {e}")
 
