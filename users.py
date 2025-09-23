@@ -19,7 +19,6 @@ TEAMS = {
         "team_name": "Отдел бизнес-анализа операций на финансовых рынках",
         "tag": "Daily",
         "members": {
-        "bazarkinkv@sovcombank.ru": "Константин Базаркин",
             "malyutinda@sovcombank.ru": "Дмитрий Малютин",
             "baroninap@sovcombank.ru": "Антон Баронин",
             "chasovaa@sovcombank.ru": "Андрей Часов",

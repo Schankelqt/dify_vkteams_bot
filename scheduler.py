@@ -70,8 +70,9 @@ def clean_team_answers(today_str: str, team_id: int):
         if uid in members:
             if info.get("date") == today_str:
                 updated[uid] = info
+            # если дата не совпадает — не сохраняем (очистка)
         else:
-            # не трогаем других сотрудников (другие команды)
+            # не трогаем сотрудников других команд
             updated[uid] = info
 
     save_answers(updated)
@@ -86,11 +87,14 @@ def build_text_report(team_id: int, date_str: str) -> str:
 
     for user_id, full_name in team.get("members", {}).items():
         entry = answers.get(user_id)
-        summary = entry.get("summary") if entry else "-"
-        name = full_name.strip()
-        report_lines.append(f"\n👤 *{name}*\n{summary}")
-        if entry:
+        # Жёсткая проверка на актуальную дату
+        if not entry or entry.get("date") != date_str:
+            summary = "-"
+        else:
+            summary = entry.get("summary") or "-"
             responded += 1
+
+        report_lines.append(f"\n👤 *{full_name.strip()}*\n{summary}")
 
     report_lines.append(f"\n📊 Отчитались: {responded}/{total}")
     return "\n".join(report_lines)
@@ -138,14 +142,13 @@ async def send_report(team_id: int, date_str: str):
         except Exception as e:
             print(f"⚠️ Ошибка при отправке отчёта → {manager_id}: {e}")
 
-    # После отправки отчёта чистим ответы этой команды
-    clean_team_answers(date_str, team_id)
-
 def job_send_questions(team_id: int, key: str):
     asyncio.run(send_questions(team_id, key))
 
 def job_send_report(team_id: int):
     today = datetime.now(MSK).strftime("%Y-%m-%d")
+    # ✅ чистим перед генерацией отчёта
+    clean_team_answers(today, team_id)
     asyncio.run(send_report(team_id, today))
 
 # --- Расписание ---
