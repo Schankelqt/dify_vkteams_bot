@@ -160,12 +160,12 @@ def job_send_report(team_id: int):
 # Команда 1 (Daily)
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=1, key="daily_start")
 schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
-schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
+schedule.every().wednesday.at("09:18").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().thursday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 
 schedule.every().monday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().tuesday.at("09:30").do(job_send_report, team_id=1)
-schedule.every().wednesday.at("09:30").do(job_send_report, team_id=1)
+schedule.every().wednesday.at("09:19").do(job_send_report, team_id=1)
 schedule.every().thursday.at("09:30").do(job_send_report, team_id=1)
 
 # Команда 2 (Daily)

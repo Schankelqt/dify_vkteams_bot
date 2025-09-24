@@ -5,15 +5,8 @@ TEAMS = {
         "tag": "Daily",
         "members": {
             "vostrikovkk@sovcombank.ru": "Кирилл Востриков",
-            "moiseenkovd@sovcombank.ru": "Виктория Моисеенко",
-            "zaitsevav4@sovcombank.ru": "Александр Зайцев",
-            "voronkovats@sovcombank.ru": "Татьяна Воронкова",
-            "goloschapovana@sovcombank.ru": "Наталья Голощапова",
-            "dmitrievskayamn@sovcombank.ru": "Марьяна Попова",
-            "khvana@sovcombank.ru": "Алексей Хван",
-            "karimovam1@sovcombank.ru": "Айрат Каримов",
         },
-        "managers": ["vostrikovkk@sovcombank.ru","maslenikea@sovcombank.ru"],
+        "managers": ["vostrikovkk@sovcombank.ru"],
     },
     2: {
         "team_name": "Отдел бизнес-анализа операций на финансовых рынках",
