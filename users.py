@@ -4,7 +4,6 @@ TEAMS = {
         "team_name": "Отдел развития цифровых каналов и сервисов",
         "tag": "Daily",
         "members": {
-            "vostrikovkk@sovcombank.ru": "Кирилл Востриков",
             "moiseenkovd@sovcombank.ru": "Виктория Моисеенко",
             "zaitsevav4@sovcombank.ru": "Александр Зайцев",
             "voronkovats@sovcombank.ru": "Татьяна Воронкова",
