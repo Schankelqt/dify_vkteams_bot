@@ -36,7 +36,7 @@ TEAMS = {
             "voschenkovis@sovcombank.ru": "Илья Вощенков",
             "akinshinany@sovcombank.ru": "Наталья Акиньшина",
             "yurkovkv@sovcombank.ru": "Константин Юрков",
-            "korepanovaev@sovcombank.ru": "Екатерина Бахур",
+            "korepanovaev@sovcombank.ru": "Екатерина Бахур",            
         },
         "managers": ["vostrikovkk@sovcombank.ru","ochkinav@sovcombank.ru"],
     },
@@ -44,7 +44,7 @@ TEAMS = {
         "team_name": "Отдел аналитики данных и неторговых операций",
         "tag": "Weekly",
         "members": {
-            "vostrikovkk@sovcombank.ru": "Кирилл Востриков", #+       
+            "vostrikovkk@sovcombank.ru": "Кирилл Востриков",       
         },
         "managers": ["vostrikovkk@sovcombank.ru",],
     },

@@ -25,11 +25,11 @@ def upload_json_to_task(json_data: dict, file_name: str, team_id: int):
     """
     Загружает JSON-отчёт в Pyrus через прокси эндпоинт.
     Для команд 1–2 (daily) → Daily задача.
-    Для команды 3 (weekly) → Weekly задача.
+    Для команды 3,4 (weekly) → Weekly задача.
     При неудаче (например, timeout) пытается снова каждые 5 минут до успеха.
     """
 
-    if team_id == 3:
+    if team_id in (3,4):
         task_id = int(TASK_ID_WEEKLY)
     else:
         task_id = int(TASK_ID_DAILY)
