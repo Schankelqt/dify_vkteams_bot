@@ -67,9 +67,12 @@ def clear_team_members(team_id: int):
 
 # ---------- Работа с датами ----------
 def get_week_range_str(today: date) -> str:
-    monday = today - timedelta(days=today.weekday())
-    friday = monday + timedelta(days=4)
-    return f"{monday.isoformat()}-{friday.isoformat()}"
+    """
+    Вернуть строку вида DD.MM.YYYY–DD.MM.YYYY для текущей недели (пн–пт).
+    """
+    monday = today - timedelta(days=today.weekday())   # понедельник
+    friday = monday + timedelta(days=4)                # пятница
+    return f"{monday.strftime('%d.%m.%Y')} - {friday.strftime('%d.%m.%Y')}"
 
 # ---------- Формирование отчёта ----------
 def build_text_report(team_id: int) -> str:
@@ -166,8 +169,8 @@ schedule.every().wednesday.at("15:00").do(job_send_questions, team_id=3, key="we
 schedule.every().wednesday.at("22:00").do(job_send_report, team_id=3)
 
 # Команда 4 (Weekly)
-schedule.every().tuesday.at("14:57").do(job_send_questions, team_id=4, key="weekly")
-schedule.every().tuesday.at("14:59").do(job_send_report, team_id=4)
+schedule.every().tuesday.at("15:05").do(job_send_questions, team_id=4, key="weekly")
+schedule.every().tuesday.at("15:07").do(job_send_report, team_id=4)
 
 # ---------- Запуск ----------
 print("🕒 Планировщик запущен. Ожидание задач...")
