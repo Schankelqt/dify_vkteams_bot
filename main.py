@@ -77,7 +77,7 @@ def find_team_id_vk(user_key: str) -> int | None:
 
 def get_dify_headers(user_key: str) -> dict:
     team_id = find_team_id_vk(user_key)
-    if team_id == 3:
+    if team_id == (3, 4):
         api_key = DIFY_API_KEY_WEEKLY
     else:
         api_key = DIFY_API_KEY_DAILY
@@ -108,7 +108,7 @@ def build_individual_report(user_key: str, summary: str):
     today = date.today()
     team_id = find_team_id_vk(user_key)
     team = TEAMS.get(team_id, {})
-    tag = "weekly" if team_id == 3 else "daily"
+    tag = "weekly" if team_id == (3, 4) else "daily"
 
     full_name = USERS.get(user_key, "Неизвестный Пользователь")
     first, last = (full_name.split() + ["Unknown", "Unknown"])[:2]

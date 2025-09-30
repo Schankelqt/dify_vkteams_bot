@@ -41,6 +41,14 @@ TEAMS = {
         },
         "managers": ["vostrikovkk@sovcombank.ru","ochkinav@sovcombank.ru"],
     },
+    4: {
+        "team_name": "Отдел аналитики данных и неторговых операций",
+        "tag": "Weekly",
+        "members": {
+            "vostrikovkk@sovcombank.ru": "Кирилл Востриков", #+       
+        },
+        "managers": ["vostrikovkk@sovcombank.ru",],
+    },
 }
 
 # Плоский словарь: userId -> ФИО

@@ -161,25 +161,35 @@ def job_send_report(team_id: int):
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=1, key="daily_start")
 schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
-schedule.every().thursday.at("12:07").do(job_send_questions, team_id=1, key="daily_regular")
+schedule.every().thursday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
+schedule.every().friday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 
 schedule.every().monday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().tuesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().wednesday.at("09:30").do(job_send_report, team_id=1)
 schedule.every().thursday.at("09:30").do(job_send_report, team_id=1)
+schedule.every().friday.at("09:30").do(job_send_report, team_id=1)
+
 
 # Команда 2 (Daily)
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=2, key="daily_start")
+schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=2, key="daily_start")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=2, key="daily_regular")
+schedule.every().thursday.at("09:00").do(job_send_questions, team_id=2, key="daily_regular")
 schedule.every().friday.at("09:00").do(job_send_questions, team_id=2, key="daily_regular")
 
 schedule.every().monday.at("11:00").do(job_send_report, team_id=2)
+schedule.every().tuesday.at("11:00").do(job_send_report, team_id=2)
 schedule.every().wednesday.at("11:00").do(job_send_report, team_id=2)
+schedule.every().thursday.at("11:00").do(job_send_report, team_id=2)
 schedule.every().friday.at("11:00").do(job_send_report, team_id=2)
 
 # Команда 3 (Weekly)
 schedule.every().wednesday.at("15:00").do(job_send_questions, team_id=3, key="weekly")
 schedule.every().wednesday.at("22:00").do(job_send_report, team_id=3)
+# Команда 4 (Weekly)
+schedule.every().thursday.at("14:25").do(job_send_questions, team_id=4, key="weekly")
+schedule.every().thursday.at("14:30").do(job_send_report, team_id=4)
 
 # ---------- Запуск ----------
 print("🕒 Планировщик запущен. Ожидание задач...")
