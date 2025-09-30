@@ -4,6 +4,7 @@ TEAMS = {
         "team_name": "Отдел развития цифровых каналов и сервисов",
         "tag": "Daily",
         "members": {
+            "vostrikovkk@sovcombank.ru": "Кирилл Востриков",
             "moiseenkovd@sovcombank.ru": "Виктория Моисеенко",
             "zaitsevav4@sovcombank.ru": "Александр Зайцев",
             "voronkovats@sovcombank.ru": "Татьяна Воронкова",
@@ -36,7 +37,7 @@ TEAMS = {
             "voschenkovis@sovcombank.ru": "Илья Вощенков",
             "akinshinany@sovcombank.ru": "Наталья Акиньшина",
             "yurkovkv@sovcombank.ru": "Константин Юрков",
-            "korepanovaev@sovcombank.ru": "Екатерина Бахур",            
+            "korepanovaev@sovcombank.ru": "Екатерина Бахур",
         },
         "managers": ["vostrikovkk@sovcombank.ru","ochkinav@sovcombank.ru"],
     },
@@ -44,9 +45,18 @@ TEAMS = {
         "team_name": "Отдел аналитики данных и неторговых операций",
         "tag": "Weekly",
         "members": {
-            "vostrikovkk@sovcombank.ru": "Кирилл Востриков",       
+            "nurgaleevaav@sovcombank.ru": "Анна Нургалеева", #+
+            "aleshinbv@sovcombank.ru": "Борис Алёшин",#+
+            "baganovva@sovcombank.ru": "Владимир Баганов", #+
+            "levkiniv@sovcombank.ru": "Илья Лёвкин",#+
+            "masalimovaaa@sovcombank.ru": "Азалия Масалимова", #+
+            "peresypkinaav@sovcombank.ru": "Анастасия Пересыпкина", #+
+            "raikonenys@sovcombank.ru": "Юлия Райконен",
+            "sadovnikovvn@sovcombank.ru": "Вячеслав Садовников",
+            "yurinokmg@sovcombank.ru": "Мария Юринок", #+
+            "yamschikovdv@sovcombank.ru": "Дмитрий Ямщиков",       
         },
-        "managers": ["vostrikovkk@sovcombank.ru",],
+        "managers": ["vostrikovkk@sovcombank.ru","muzalevskiidi@sovcombank.ru"],
     },
 }
 
