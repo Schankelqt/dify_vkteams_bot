@@ -45,15 +45,15 @@ TEAMS = {
         "team_name": "Отдел аналитики данных и неторговых операций",
         "tag": "Weekly",
         "members": {
-            "nurgaleevaav@sovcombank.ru": "Анна Нургалеева", #+
-            "aleshinbv@sovcombank.ru": "Борис Алёшин",#+
-            "baganovva@sovcombank.ru": "Владимир Баганов", #+
-            "levkiniv@sovcombank.ru": "Илья Лёвкин",#+
-            "masalimovaaa@sovcombank.ru": "Азалия Масалимова", #+
-            "peresypkinaav@sovcombank.ru": "Анастасия Пересыпкина", #+
+            "nurgaleevaav@sovcombank.ru": "Анна Нургалеева",
+            "aleshinbv@sovcombank.ru": "Борис Алёшин",
+            "baganovva@sovcombank.ru": "Владимир Баганов",
+            "levkiniv@sovcombank.ru": "Илья Лёвкин",
+            "masalimovaaa@sovcombank.ru": "Азалия Масалимова",
+            "peresypkinaav@sovcombank.ru": "Анастасия Пересыпкина",
             "raikonenys@sovcombank.ru": "Юлия Райконен",
             "sadovnikovvn@sovcombank.ru": "Вячеслав Садовников",
-            "yurinokmg@sovcombank.ru": "Мария Юринок", #+
+            "yurinokmg@sovcombank.ru": "Мария Юринок",
             "yamschikovdv@sovcombank.ru": "Дмитрий Ямщиков",       
         },
         "managers": ["vostrikovkk@sovcombank.ru","muzalevskiidi@sovcombank.ru"],

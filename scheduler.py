@@ -169,8 +169,8 @@ schedule.every().wednesday.at("15:00").do(job_send_questions, team_id=3, key="we
 schedule.every().wednesday.at("22:00").do(job_send_report, team_id=3)
 
 # Команда 4 (Weekly)
-schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=4, key="weekly")
-schedule.every().tuesday.at("16:00").do(job_send_report, team_id=4)
+schedule.every().thursday.at("10:05").do(job_send_questions, team_id=4, key="weekly")
+schedule.every().thursday.at("16:00").do(job_send_report, team_id=4)
 
 # ---------- Запуск ----------
 print("🕒 Планировщик запущен. Ожидание задач...")
