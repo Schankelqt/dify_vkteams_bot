@@ -38,6 +38,7 @@ TEAMS = {
             "akinshinany@sovcombank.ru": "Наталья Акиньшина",
             "yurkovkv@sovcombank.ru": "Константин Юрков",
             "korepanovaev@sovcombank.ru": "Екатерина Бахур",
+            "pletnevapv@sovcombank.ru": "Полина Плетнева",
         },
         "managers": ["vostrikovkk@sovcombank.ru","ochkinav@sovcombank.ru"],
     },
