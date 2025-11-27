@@ -1,5 +1,3 @@
-# main.py
-
 import asyncio
 import logging
 import os
@@ -17,7 +15,6 @@ from vk_teams_async_bot.handler import CommandHandler, MessageHandler
 from vk_teams_async_bot.filter import Filter
 
 from users import USERS, TEAMS
-from pyrus_client import upload_json_to_task
 
 # ---------- Логирование ----------
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -53,8 +50,9 @@ CONFIRMATION_PHRASES = {
     "да, можно отправлять", "все правильно", "всё правильно",
     "абсолютно", "правильно", "так и есть", "да-да", "все супер",
     "всё супер", "супер", "хорошо", "отлично", "всё четко", "все четко",
-    "четко", "ясно","zaebis","zaebis","всё ок","все хорошо","все ок","сойдёт","сойдет",
-    "норм","нормально","нормас","da","ok","okay","okey","kayf,пойдёт,пойдет"
+    "четко", "ясно", "zaebis", "zaebis", "всё ок", "все хорошо",
+    "все ок", "сойдёт", "сойдет", "норм", "нормально", "нормас",
+    "da", "ok", "okay", "okey", "kayf", "пойдёт", "пойдет"
 }
 CONFIRM_STRIP_RE = re.compile(r"[^\w\sёЁ]+", re.UNICODE)
 
@@ -86,70 +84,6 @@ def get_dify_headers(user_key: str) -> dict:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-
-# ---------- Работа с датами ----------
-def get_week_range_str(today: date) -> str:
-    """
-    Вернуть строку вида YYYY-MM-DD–YYYY-MM-DD для текущей недели (пн–пт).
-    """
-    monday = today - timedelta(days=today.weekday())   # понедельник
-    friday = monday + timedelta(days=4)                # пятница
-    return f"{monday.isoformat()}-{friday.isoformat()}"
-
-# ---------- Работа с ответом и JSON ----------
-def clean_summary(answer_text: str) -> str:
-    lines = (answer_text or "").splitlines()
-    for i, line in enumerate(lines):
-        if "sum" in line.lower():
-            return "\n".join(lines[i+1:]).strip()
-    return (answer_text or "").strip()
-
-def build_individual_report(user_key: str, summary: str):
-    today = date.today()
-    team_id = find_team_id_vk(user_key)
-    team = TEAMS.get(team_id, {})
-    tag = "weekly" if team_id in (3,4) else "daily"
-
-    full_name = USERS.get(user_key, "Неизвестный Пользователь")
-    first, last = (full_name.split() + ["Unknown", "Unknown"])[:2]
-
-    # Транслитерация
-    first_latin = translit(first, 'ru', reversed=True)
-    last_latin = translit(last, 'ru', reversed=True)
-
-    if tag == "weekly":
-        report_date = get_week_range_str(today)
-        file_name = f"Weekly_report_{first_latin}_{last_latin}_{report_date}.json"
-    else:
-        report_date = today.isoformat()
-        file_name = f"Daily_report_{first_latin}_{last_latin}_{report_date}.json"
-
-    report = {
-        "version": "1.0",
-        "report_date_utc": report_date,
-        "source": {
-            "bot": "meetings_dify_bot",
-            "tag": tag
-        },
-        "teams": [
-            {
-                "team_name": team.get("team_name"),
-                "tag": tag,
-                "managers": team.get("managers", []),
-                "members": [
-                    {
-                        "e-mail": user_key,
-                        "full_name": full_name,
-                        "summary": {
-                            "text": summary
-                        }
-                    }
-                ]
-            }
-        ]
-    }
-
-    return report, file_name
 
 # ---------- Работа с Dify ----------
 def dify_get_conversation_id(user_key: str, headers: dict) -> str | None:
@@ -203,8 +137,8 @@ async def on_message(event: Event, bot: Bot):
     chat_id = getattr(event.chat, "chatId", None)
     from_id = getattr(event.from_, "userId", None) if hasattr(event, "from_") else None
     user_text = getattr(event, "text", "") or ""
-
     user_key = from_id or chat_id
+
     if not user_key:
         logger.warning("No user_key (chatId/from.userId) — skip")
         return
@@ -219,6 +153,7 @@ async def on_message(event: Event, bot: Bot):
 
     headers = get_dify_headers(user_key)
     conv_id = conversation_ids.get(user_key)
+
     if not conv_id:
         conv_id = dify_get_conversation_id(user_key, headers)
         if conv_id:
@@ -234,11 +169,14 @@ async def on_message(event: Event, bot: Bot):
         body = resp.json()
         answer_text = body.get("answer", "") or ""
         new_conv_id = body.get("conversation_id")
+
         if new_conv_id:
             conversation_ids[user_key] = new_conv_id
 
+        # -------- сохранение ответа в answers.json --------
         if is_confirmation(user_text) and ("sum" in answer_text.lower()):
-            summary = clean_summary(answer_text)
+            summary = answer_text
+
             team_id = find_team_id_vk(user_key)
             try:
                 with open("answers.json", "r", encoding="utf-8") as f:
@@ -260,16 +198,10 @@ async def on_message(event: Event, bot: Bot):
             except Exception as e:
                 logger.error(f"[FILE] write error: {e}")
 
-            try:
-                payload, file_name = build_individual_report(user_key, summary)
-                upload_json_to_task(payload, file_name, team_id)
-                logger.info(f"[PYRUS] Файл {file_name} отправлен в Pyrus")
-            except Exception as e:
-                logger.error(f"[PYRUS] Ошибка загрузки отчёта в Pyrus: {e}")
-
             reply = "✅ Спасибо! Отчёт сохранён."
         else:
             reply = answer_text
+
     else:
         reply = "⚠️ Ошибка при обращении к Dify"
 
