@@ -158,7 +158,7 @@ def job_send_report(team_id: int):
 schedule.every().monday.at("09:00").do(job_send_questions, team_id=1, key="daily_start")
 schedule.every().tuesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().wednesday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
-schedule.every().thursday.at("09:40").do(job_send_questions, team_id=1, key="daily_regular")
+schedule.every().thursday.at("10:00").do(job_send_questions, team_id=1, key="daily_regular")
 schedule.every().friday.at("09:00").do(job_send_questions, team_id=1, key="daily_regular")
 
 schedule.every().monday.at("09:30").do(job_send_report, team_id=1)
