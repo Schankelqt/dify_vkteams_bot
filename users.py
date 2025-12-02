@@ -23,6 +23,7 @@ TEAMS = {
             "baroninap@sovcombank.ru": "Антон Баронин",
             "chasovaa@sovcombank.ru": "Андрей Часов",
             "rahmankulovrk@sovcombank.ru": "Радмир Рахманкулов",
+            "urmanovars@sovcombank.ru": "Рената Урманова",
         },
         "managers": ["vostrikovkk@sovcombank.ru","chalikea@sovcombank.ru"],
     },
