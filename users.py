@@ -21,7 +21,6 @@ TEAMS = {
         "members": {
             "malyutinda@sovcombank.ru": "Дмитрий Малютин",
             "baroninap@sovcombank.ru": "Антон Баронин",
-            "chasovaa@sovcombank.ru": "Андрей Часов",
             "rahmankulovrk@sovcombank.ru": "Радмир Рахманкулов",
             "urmanovars@sovcombank.ru": "Рената Урманова",
         },
