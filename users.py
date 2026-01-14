@@ -1,4 +1,3 @@
-# users.py — VK Teams пользователи и команды (email как userId / chatId)
 TEAMS = {
     1: {
         "team_name": "Отдел развития цифровых каналов и сервисов",
